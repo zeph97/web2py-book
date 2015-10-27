@@ -137,7 +137,7 @@ Options:
 
 ------
 Please note:
-- The option ``-W``, used to install a Windows service, has been removed. Please see [[nssm in the Deployment Recipes chapter ../13/#nssm]]
+- The option ``-W``, used to install a Windows service, has been removed. Please see [[nssm in the Deployment Recipes chapter ../13#nssm]]
 - Profiler output can be analyzed using ``runsnakerun`` tool
 ------
 
@@ -169,7 +169,8 @@ There are some caveats to keep in mind:
 ``models_to_run``:inxx
 ``conditional models``:inxx
 [[conditional_models]]
-- Models in subfolders are executed conditionally. For example, if the user has requested "/a/c/f" where "a" is the application, "c" is the controller, and "f" is the function (action), then the following models are executed:
+#### Conditional models
+- Models in subfolders are executed conditionally based on the controller in use. This avoids processing all table definitions at each request. For example, if the user has requested "/a/c/f" where "a" is the application, "c" is the controller, and "f" is the function (action), then the following models are executed:
 
 ``
 applications/a/models/*.py
@@ -457,7 +458,7 @@ gluon/contrib/markdown/markdown2.py
 ``
 gluon/contrib/markmin
 ``:code
-(see [[MARKMIN syntax ../05/#markmin_syntax]] for more)
+(see [[MARKMIN syntax ../05#markmin_syntax]] for more)
 
 **fpdf** created my Mariano Reingart for generating PDF documents:
 ``
@@ -734,9 +735,9 @@ from gluon.tools import Auth, Crud, Service
 ``:code
 They are imported in ``db.py`` in the scaffolding application.
 
-#### Accessing the API from Python modules
+### Accessing the API from Python modules
 
-Your models or controller may import python modules, and these may need to use some of the web2py API. The way to do it is by importing them:
+Your models or controller may import python modules. These are usually python files you store in the modules directory of your app. They may need to use some of the web2py API. The way to do it is by importing them:
 
 ``
 from gluon import *
@@ -744,6 +745,8 @@ from gluon import *
 
 In fact, any Python module, even if not imported by a web2py application, can import the web2py API as long as web2py is in the ``sys.path``.
 
+[[current_object]]
+#### Sharing the global scope with modules using the current object
 There is one caveat, though. Web2py defines some global objects (request, response, session, cache, T) that can only exist when an HTTP request is present (or is faked). Therefore, modules can access them only if they are called from an application. For this reasons they are placed into a container called ``current``, which is a thread local object. Here is an example.
 
 Create a module "/myapp/modules/test.py" that contains:
@@ -791,13 +794,14 @@ and any other variable your application chooses to store in current. For example
 auth = Auth(db)
 from gluon import current
 current.auth = auth
+current.db = db #not needed in this case but useful
 ``
 
 and now all modules imported can access ``current.auth``.
 
 ``current`` and ``import`` create a powerful mechanism to build extensible and reusable modules for your applications.
 
--------
+#### Warning! Do not use the current object in global scope in a module
 Beware! Given ``from gluon import current``, it is correct to use ``current.request`` and any of the other thread local objects but one should never assign them to global variables in the module, such as in
 ``
 request = current.request # WRONG! DANGER!
@@ -808,7 +812,16 @@ class MyClass:
     request = current.request # WRONG! DANGER!
 ``
 This is because the thread local object must be extracted at runtime. Global variables instead are defined only once when the model is imported for the first time.
--------
+
+Instead, assign inside a function. 
+
+``
+import * from gluon
+...
+def a_module_function():
+   db = current.db  #assuming you assigned current.db = db in the model db.py 
+   ...
+``:code
 
 Another caveat has to do with cache. You cannot use the ``cache`` object to decorate functions in modules, that is because it would not behave as expected. In order to cache a function ``f`` in a module you must use ``lazy_cache``:
 
@@ -1276,15 +1289,15 @@ NB: it will do one or another or **both**.
 ------
 The main problem with caching a view with ``@cache(request.env.path_info, time_expire=300, cache_model=cache.ram)`` is that request.env.path_info as a key leads to several problems, e.g.
 + URL vars are not considered
-  -- you cached the result of ''/app/default/index?**search=foo**'' : for the next 300 seconds ''/app/default/index?**search=bar**'' will return the exact same thing of ''/app/default/index?**search=foo**''
+  -- You cached the result of ''/app/default/index?**search=foo**'' : for the next 300 seconds ''/app/default/index?**search=bar**'' will return the exact same thing of ''/app/default/index?**search=foo**''
 + User is not considered
-  -- you user accesses often a page and you choose to cache it. 
+  -- Your user accesses a page often and you choose to cache it. 
      However, you cached the result of ''/app/default/index'' using request.env.path_info as the key, so another user
      will see a page that was not meant for him
-  -- you cached a page for "Bill", but "Bill" accessed the page from the desktop. Now he tries to access it from its phone: if you prepared a template 
+  -- You cached a page for "Bill", but "Bill" accessed the page from the desktop. Now he tries to access it from his phone: if you prepared a template 
      for mobile users that is different from the standard one, "Joe" will not see it
 + Language is not considered
-  -- when you cache the page, if you use T() for some elements, the page will be stored with a fixed translation
+  -- When you cache the page, if you use T() for some elements, the page will be stored with a fixed translation
 + Method is not considered
   -- When you cache a page, you should only cache it if it's a result of a GET operation
 + Status code is not considered
@@ -1714,7 +1727,7 @@ a book (x==1)
 5 books (x==5)
 ``
 
-English has one singular form and one plural form. The plural form is constructed by adding a "-s" or "-es" or using an exceptional form. web2py provides a way to define pluralization rules for each language, as well as exceptions to the default rules. In fact web2py already knows pluralization rules for many languages. It knows, for example, that Slovenian has one singular form and 3 plural forms (for x==1, x==3 or x==4 and x>4). These rules are encoded in "gluon/contrib/plural_rules/*.py" files and new files can be created. Explicit pluralizations for words are created by editing pluralization files using the administrative interface.
+English has one singular form and one plural form. The plural form is constructed by adding a "-s" or "-es" or using an exceptional form. web2py provides a way to define pluralization rules for each language, as well as exceptions to the default rules. In fact web2py already knows pluralization rules for many languages. It knows, for example, that Slovenian has one singular form and 3 plural forms (for x==2, x==3 or x==4 and x>4). These rules are encoded in "gluon/contrib/plural_rules/*.py" files and new files can be created. Explicit pluralizations for words are created by editing pluralization files using the administrative interface.
 
 By default the PS is not activated. It is triggered by the ``symbol`` argument of the ``T`` function. For example:
 
@@ -2391,7 +2404,7 @@ While cron is useful to run tasks at regular time intervals, it is not always th
 python web2py.py -S app -M -R applications/app/private/myscript.py -A a b c
 ``:code
 
-where ``-S app`` tells web2py to run "myscript.py" as "app", ``-M`` tells web2py to execute models, and ``-A a b c`` passes optional command line arguments ``sys.args=['a','b','c']`` to "myscript.py".
+where ``-S app`` tells web2py to run "myscript.py" as "app", ``-M`` tells web2py to execute models, and ``-A a b c`` passes optional command line arguments ``sys.argv=['applications/app/private/myscript.py','a','b','c']`` to "myscript.py".
 
 This type of background process should not be executed via cron (except perhaps for cron @reboot) because you need to be sure that no more than one instance is running at the same time. With cron it is possible that a process starts at cron iteration 1 and is not completed by cron iteration 2, so cron starts it again, and again, and again - thus jamming the mail server.
 

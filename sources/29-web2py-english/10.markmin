@@ -141,7 +141,7 @@ If the dictionary contains other user-defined or web2py-specific objects, they m
 If you need to render a set of Rows as returned by a select in XML or JSON or another format,
 first transform the Rows object into a list of dictionaries using the ``as_list()`` method.
 
-Consider for example the following mode:
+Consider for example the following model:
 ``
 db.define_table('person', Field('name'))
 ``:code
@@ -1375,7 +1375,7 @@ def public_call(): return public_service()
 def private_call(): return private_service()
 ``:code
 
-This assumes that the caller is passing credentials in the HTTP header (a valid session cookie or using [[basic authentication ../09/#basic_authentication]], as discussed in the previous chapter). The client must support it; not all clients do.
+This assumes that the caller is passing credentials in the HTTP header (a valid session cookie or using [[basic authentication ../09#basic_authentication]], as discussed in the previous chapter). The client must support it; not all clients do.
 
 If using ServerProxy() described above, you can pass basic authentication credentials in the URL, like so:
 ``
